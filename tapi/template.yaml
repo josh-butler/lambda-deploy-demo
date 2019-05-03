@@ -1,0 +1,38 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  tapi
+
+  SAM Template for tapi
+
+Globals:
+  Function:
+    Timeout: 30
+
+Resources:
+  RootFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: app/
+      Handler: app.lambda_handler
+      Runtime: python3.7
+      Environment:
+        Variables:
+          TABLE_NAME: not-set
+      Events:
+        GetRoot:
+          Type: Api
+          Properties:
+            Path: /
+            Method: get
+
+Outputs:
+  TapiApi:
+    Description: "API Gateway endpoint URL for Prod stage for Root function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+  RootFunction:
+    Description: "Root Lambda Function ARN"
+    Value: !GetAtt RootFunction.Arn
+  RootFunctionIamRole:
+    Description: "Implicit IAM Role created for Root function"
+    Value: !GetAtt RootFunctionRole.Arn
