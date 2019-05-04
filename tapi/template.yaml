@@ -16,9 +16,10 @@ Resources:
       CodeUri: app/
       Handler: app.lambda_handler
       Runtime: python3.7
-      Environment:
-        Variables:
-          TABLE_NAME: not-set
+      # Environment:
+      #   Variables:
+      #     TABLE_NAME: not-set
+      AutoPublishAlias: Prod
       Events:
         GetRoot:
           Type: Api
