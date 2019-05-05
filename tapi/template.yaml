@@ -1,9 +1,9 @@
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: >
   tapi
 
-  SAM Template for tapi
+  SAM Template demonstrating canary Lambda deploys with CodeDeploy
 
 Globals:
   Function:
@@ -14,12 +14,13 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: app/
-      Handler: app.lambda_handler
+      Handler: app.lambda
       Runtime: python3.7
-      # Environment:
-      #   Variables:
-      #     TABLE_NAME: not-set
       AutoPublishAlias: Prod
+      DeploymentPreference:
+        Type: Linear10PercentEvery10Minutes
+        Hooks:
+          PreTraffic: !Ref PreTrafficFunction
       Events:
         GetRoot:
           Type: Api
@@ -27,13 +28,40 @@ Resources:
             Path: /
             Method: get
 
+  PreTrafficFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: CodeDeployHook_preTrafficHook
+      CodeUri: app/
+      Handler: pre_traffic_hook.handler
+      Runtime: python3.7
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - codedeploy:PutLifecycleEventHookExecutionStatus
+              Resource: !Sub arn:${AWS::Partition}:codedeploy:${AWS::Region}:${AWS::AccountId}:deploymentgroup:${ServerlessDeploymentApplication}/*
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - lambda:InvokeFunction
+              Resource: !Ref RootFunction.Version
+      DeploymentPreference:
+        Enabled: false
+        Role: ""
+      Environment:
+        Variables:
+          CurrentVersion: !Ref RootFunction.Version
+
 Outputs:
   TapiApi:
-    Description: "API Gateway endpoint URL for Prod stage for Root function"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+    Description: API Gateway endpoint URL for Prod stage for Root function
+    Value: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/
   RootFunction:
-    Description: "Root Lambda Function ARN"
+    Description: Root Lambda Function ARN
     Value: !GetAtt RootFunction.Arn
   RootFunctionIamRole:
-    Description: "Implicit IAM Role created for Root function"
+    Description: Implicit IAM Role created for Root function
     Value: !GetAtt RootFunctionRole.Arn
