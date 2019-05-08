@@ -11,6 +11,7 @@ SAM_DIR := tapi
 .PHONY: install
 install:
 	apt-get update -y
+	pip install pytest pytest-mock --user
 	pip install --user aws-sam-cli
 
 .PHONY: test
