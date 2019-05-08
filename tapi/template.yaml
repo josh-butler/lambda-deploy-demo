@@ -14,11 +14,12 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: app/
-      Handler: app.lambda
+      Handler: app.handler
       Runtime: python3.7
       AutoPublishAlias: Prod
       DeploymentPreference:
-        Type: Linear10PercentEvery10Minutes
+        # Type: Linear10PercentEvery10Minutes
+        Type: AllAtOnce
         Hooks:
           PreTraffic: !Ref PreTrafficFunction
       Events:

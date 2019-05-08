@@ -1,0 +1,244 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >
+  Create a CodePipeline and CodeBuild project for a demo SAM app
+
+Parameters:
+  # StackName:
+  #   Type: String
+  #   Description: Name of the CF stack that will be deployed by CodePipeline
+  #   Default: tapi-sam-app
+
+  GitHubRepo:
+    Type: String
+    Description: Source GitHub repository name
+    Default: lambda-deploy-demo
+
+  GitHubOwner:
+    Type: String
+    Description: GitHub username for CI/CD purposes
+    Default: josh-butler
+
+  GitHubBranch:
+    Type: String
+    Description: Source GitHub repository branch
+    Default: master
+
+  GitHubToken:
+    Type: String
+    Description: GitHub access token
+
+Resources:
+  CodePipelineServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codepipeline.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: !Sub ${AWS::StackName}-cpl-service
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:GetBucketVersioning
+                Resource:
+                  - !Sub arn:aws:s3:::${ArtifactStoreBucket}/*
+              - Effect: Allow
+                Action:
+                  - cloudformation:CreateStack
+                  - cloudformation:DeleteStack
+                  - cloudformation:DescribeStacks
+                  - cloudformation:UpdateStack
+                  - cloudformation:CreateChangeSet
+                  - cloudformation:DeleteChangeSet
+                  - cloudformation:DescribeChangeSet
+                  - cloudformation:ExecuteChangeSet
+                  - cloudformation:SetStackPolicy
+                  - cloudformation:ValidateTemplate
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - codebuild:StartBuild
+                  - codebuild:BatchGetBuilds
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - iam:PassRole
+                Resource: "*"
+
+  CodeBuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+
+  CodeBuildServiceRoleDefaultPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: CodeBuildServiceRoleDefaultPolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:DeleteLogGroup
+              - logs:DeleteLogStream
+              - logs:PutLogEvents
+            Resource:
+              - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${CodeBuildProject}
+              - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${CodeBuildProject}:*
+          - Effect: Allow
+            Action:
+              - cloudformation:ValidateTemplate
+            Resource: "*"
+          - Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+              - s3:GetObjectVersion
+            Resource:
+              - !Sub arn:aws:s3:::${ArtifactStoreBucket}/*
+              - !Sub arn:aws:s3:::${SAMArtifactBucket}/*
+      Roles:
+        - Ref: CodeBuildServiceRole
+
+  CloudFormationServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudformation.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: !Sub ${AWS::StackName}-cf-service
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:CreateBucket
+                  - s3:DeleteBucket*
+                  - s3:GetBucket*
+                  - s3:PutBucket*
+                  - s3:ListBucket*
+                Resource: "*"
+
+  ArtifactStoreBucket:
+    Type: AWS::S3::Bucket
+
+  SAMArtifactBucket:
+    Type: AWS::S3::Bucket
+
+  CodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Artifacts:
+        Type: CODEPIPELINE
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: |
+          version: 0.2
+          phases:
+            install:
+              commands:
+                - echo INSTALL phase started `date`
+                - apt-get update -y
+            pre_build:
+              commands:
+                - echo PRE_BUILD phase started `date`
+                - make package
+            # build:
+            #   commands:
+            #     - echo BUILD phase started `date`
+            #     - aws cloudformation validate-template --template-body file://topic-12/bucket.yaml
+            #     - cfn_nag_scan --input-path topic-12/bucket.yaml
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/python:3.7.1
+        Type: LINUX_CONTAINER
+        EnvironmentVariables:
+          - Name: SAM_ARTIFACT_BUCKET
+            Value: !Ref SAMArtifactBucket
+      ServiceRole: !Ref CodeBuildServiceRole
+
+  PipelineWebhook:
+    Type: AWS::CodePipeline::Webhook
+    Properties:
+      Name: PipelineWebhook
+      Authentication: GITHUB_HMAC
+      AuthenticationConfiguration:
+        SecretToken: !Ref GitHubToken
+      Filters:
+        - JsonPath: $.ref
+          MatchEquals: "refs/heads/{Branch}"
+      TargetPipeline: !Ref CFPipeline
+      TargetAction: SourceAction
+      TargetPipelineVersion: !GetAtt CFPipeline.Version
+      RegisterWithThirdParty: true
+
+  CFPipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      Name: demo-sam-pipeline
+      RoleArn: !GetAtt CodePipelineServiceRole.Arn
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: SourceAction
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Version: "1"
+                Provider: GitHub
+              OutputArtifacts:
+                - Name: SourceOutput
+              Configuration:
+                Owner: !Ref GitHubOwner
+                Repo: !Ref GitHubRepo
+                Branch: !Ref GitHubBranch
+                OAuthToken: !Ref GitHubToken
+                PollForSourceChanges: true
+              RunOrder: 1
+        - Name: Build
+          Actions:
+            - Name: BuildAction
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: "1"
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref CodeBuildProject
+              InputArtifacts:
+                - Name: SourceOutput
+              RunOrder: 1
+      ArtifactStore:
+        Type: S3
+        Location: !Ref ArtifactStoreBucket
+
+Outputs:
+  ArtifactStoreBucket:
+    Value: !Ref ArtifactStoreBucket
+
+  SAMArtifactBucket:
+    Value: !Ref SAMArtifactBucket
