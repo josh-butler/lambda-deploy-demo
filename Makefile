@@ -5,7 +5,7 @@ AWS_DEFAULT_REGION ?= us-east-1
 SAM_STACK_NAME ?= sam-demo-app
 
 # Directory that contains the SAM app
-SAM_DIR := tapi
+APP_DIR := tapi
 
 
 .PHONY: install
@@ -20,8 +20,8 @@ test:
 
 .PHONY: package
 package:
-	sam package --template-file $(SAM_DIR)/template.yaml --s3-bucket ${SAM_ARTIFACT_BUCKET} --output-template-file $(SAM_DIR)/packaged.yaml
+	sam package --template-file $(APP_DIR)/template.yaml --s3-bucket ${SAM_ARTIFACT_BUCKET} --output-template-file $(APP_DIR)/packaged.yaml
 
 .PHONY: deploy
 deploy:
-	sam deploy --region ${AWS_DEFAULT_REGION} --template-file $(SAM_DIR)/packaged.yaml --stack-name $(SAM_STACK_NAME) --capabilities CAPABILITY_IAM
+	sam deploy --region ${AWS_DEFAULT_REGION} --template-file $(APP_DIR)/packaged.yaml --stack-name $(SAM_STACK_NAME) --capabilities CAPABILITY_IAM
