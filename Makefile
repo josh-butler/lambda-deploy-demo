@@ -10,4 +10,4 @@ package:
 
 .PHONY: deploy
 deploy:
-	cd tapi && sam deploy --region ${AWS_DEFAULT_REGION} --template-file packaged.yaml --stack-name ${STACK_NAME} --capabilities CAPABILITY_IAM
+	cd tapi && sam deploy --region ${AWS_DEFAULT_REGION} --template-file packaged.yaml --stack-name ${SAM_STACK_NAME} --capabilities CAPABILITY_IAM
