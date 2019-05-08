@@ -5,6 +5,12 @@ Description: >
 
   SAM Template demonstrating canary Lambda deploys with CodeDeploy
 
+Parameters:
+  PublishAlias:
+    Type: String
+    Description: SAM/Lambda deploy alias name (eg. prod)
+    Default: Prod
+
 Globals:
   Function:
     Timeout: 30
@@ -16,11 +22,13 @@ Resources:
       CodeUri: app/
       Handler: app.handler
       Runtime: python3.7
-      AutoPublishAlias: Prod
+      AutoPublishAlias: !Ref PublishAlias
       DeploymentPreference:
         Type: Linear10PercentEvery1Minute
         # Type: Linear10PercentEvery10Minutes
         # Type: AllAtOnce
+        Alarms:
+          - !Ref AliasErrorMetricGreaterThanZeroAlarm
         Hooks:
           PreTraffic: !Ref PreTrafficFunction
       Events:
@@ -56,6 +64,23 @@ Resources:
       Environment:
         Variables:
           CurrentVersion: !Ref RootFunction.Version
+
+  AliasErrorMetricGreaterThanZeroAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Lambda Function Error > 0
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: Resource
+          Value: !Sub ${RootFunction}:${PublishAlias}
+        - Name: FunctionName
+          Value: !Ref RootFunction
+      EvaluationPeriods: 2
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Period: 60
+      Statistic: Sum
+      Threshold: 0
 
 Outputs:
   TapiApi:
