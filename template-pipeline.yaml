@@ -3,10 +3,10 @@ Description: >
   Create a CodePipeline and CodeBuild project for a demo SAM app
 
 Parameters:
-  # StackName:
-  #   Type: String
-  #   Description: Name of the CF stack that will be deployed by CodePipeline
-  #   Default: tapi-sam-app
+  StackName:
+    Type: String
+    Description: Name of the CF stack that will be deployed by CodePipeline
+    Default: tapi-sam-app
 
   GitHubRepo:
     Type: String
@@ -170,11 +170,10 @@ Resources:
               commands:
                 - echo PRE_BUILD phase started `date`
                 - make package
-            # build:
-            #   commands:
-            #     - echo BUILD phase started `date`
-            #     - aws cloudformation validate-template --template-body file://topic-12/bucket.yaml
-            #     - cfn_nag_scan --input-path topic-12/bucket.yaml
+            build:
+              commands:
+                - echo BUILD phase started `date`
+                - make deploy
       Environment:
         ComputeType: BUILD_GENERAL1_SMALL
         Image: aws/codebuild/python:3.7.1
@@ -182,6 +181,8 @@ Resources:
         EnvironmentVariables:
           - Name: SAM_ARTIFACT_BUCKET
             Value: !Ref SAMArtifactBucket
+          - Name: SAM_STACK_NAME
+            Value: !Ref StackName
       ServiceRole: !Ref CodeBuildServiceRole
 
   PipelineWebhook:
