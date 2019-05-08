@@ -166,17 +166,22 @@ Resources:
             install:
               commands:
                 - echo INSTALL phase started `date`
-                - apt-get update -y
-                - pip install --user aws-sam-cli
+                - make install
+                # - apt-get update -y
+                # - pip install --user aws-sam-cli
                 - USER_BASE_PATH=$(python -m site --user-base)
                 - export PATH=$PATH:$USER_BASE_PATH/bin
             pre_build:
               commands:
                 - echo PRE_BUILD phase started `date`
-                - make package
+                - make test
             build:
               commands:
                 - echo BUILD phase started `date`
+                - make package
+            post_build:
+              commands:
+                - echo POST_BUILD phase started `date`
                 - make deploy
       Environment:
         ComputeType: BUILD_GENERAL1_SMALL
