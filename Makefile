@@ -16,7 +16,7 @@ install:
 
 .PHONY: test
 test:
-	python -m pytest ${APP_DIR}/tests/ -v
+	cd ${APP_DIR} && python -m pytest tests/ -v
 
 .PHONY: package
 package:
