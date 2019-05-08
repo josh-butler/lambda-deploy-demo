@@ -18,8 +18,9 @@ Resources:
       Runtime: python3.7
       AutoPublishAlias: Prod
       DeploymentPreference:
+        Type: Linear10PercentEvery1Minute
         # Type: Linear10PercentEvery10Minutes
-        Type: AllAtOnce
+        # Type: AllAtOnce
         Hooks:
           PreTraffic: !Ref PreTrafficFunction
       Events:
