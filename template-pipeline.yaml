@@ -229,7 +229,7 @@ Resources:
                 Repo: !Ref GitHubRepo
                 Branch: !Ref GitHubBranch
                 OAuthToken: !Ref GitHubToken
-                PollForSourceChanges: true
+                PollForSourceChanges: false
               RunOrder: 1
         - Name: Build
           Actions:
