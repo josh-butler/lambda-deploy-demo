@@ -118,6 +118,7 @@ Resources:
               - apigateway:*
               - codedeploy:*
               - iam:*
+              - cloudwatch:*
             Resource: "*"
       Roles:
         - Ref: CodeBuildServiceRole
@@ -167,8 +168,6 @@ Resources:
               commands:
                 - echo INSTALL phase started `date`
                 - make install
-                # - apt-get update -y
-                # - pip install --user aws-sam-cli
                 - USER_BASE_PATH=$(python -m site --user-base)
                 - export PATH=$PATH:$USER_BASE_PATH/bin
             pre_build:
