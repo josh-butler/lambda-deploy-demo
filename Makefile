@@ -5,7 +5,7 @@ AWS_DEFAULT_REGION ?= us-east-1
 SAM_STACK_NAME ?= sam-demo-app
 
 # Directory that contains the SAM app
-APP_DIR := tapi
+APP_DIR := sam-app
 
 
 .PHONY: install

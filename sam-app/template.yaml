@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  tapi
+  sam-app
 
   SAM Template demonstrating canary Lambda deploys with CodeDeploy
 
@@ -25,8 +25,6 @@ Resources:
       AutoPublishAlias: !Ref PublishAlias
       DeploymentPreference:
         Type: Linear10PercentEvery1Minute
-        # Type: Linear10PercentEvery10Minutes
-        # Type: AllAtOnce
         Alarms:
           - !Ref AliasErrorMetricGreaterThanZeroAlarm
         Hooks:
@@ -41,7 +39,7 @@ Resources:
   PreTrafficFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: CodeDeployHook_preTrafficHook
+      FunctionName: DemoAPI_preTrafficHook
       CodeUri: app/
       Handler: pre_traffic_hook.handler
       Runtime: python3.7
@@ -83,7 +81,7 @@ Resources:
       Threshold: 0
 
 Outputs:
-  TapiApi:
+  DemoApi:
     Description: API Gateway endpoint URL for Prod stage for Root function
     Value: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/
   RootFunction:

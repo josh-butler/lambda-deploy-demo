@@ -6,7 +6,7 @@ Parameters:
   StackName:
     Type: String
     Description: Name of the CF stack that will be deployed by CodePipeline
-    Default: tapi-sam-app
+    Default: demo-sam-app
 
   GitHubRepo:
     Type: String
